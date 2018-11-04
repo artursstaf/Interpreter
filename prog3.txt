@@ -1,0 +1,7 @@
+read ax, ab, ac;
+write ax, ab, ac;
+x := 30 + 40;
+x := x + ax;
+x := x + ab;
+x := x + ac;
+write x

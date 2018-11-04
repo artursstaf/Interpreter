@@ -1,0 +1,13 @@
+x := 10;
+while (5 = 13 or x >= 0) do
+    write x;
+    x:= x - 1
+od;
+
+if (not not x <> 0) then
+    y := 13 * 10
+else
+    y := 30 / 10
+fi;
+write x;
+write y

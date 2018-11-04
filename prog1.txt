@@ -1,0 +1,19 @@
+x := 13;
+aab := 15;
+while ( x + 3 >= aab - 15) do
+    read ab, ax, ad;
+    write ax, ab , ad;
+    ab := 187;
+
+    if x <> 15 or not not( not (true and false)) then
+        x := x * 3 + 8 * (91102 / 3) + abc / 3;
+        x := y;
+
+        if  true or 3 <> 3 and true then
+            skip; skip; skip
+        else
+            _safari_001_abc_  := xam
+        fi
+    fi
+
+od

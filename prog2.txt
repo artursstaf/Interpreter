@@ -1,0 +1,16 @@
+x := 13;
+if 5123123 <> x or true and  5 <> 12
+    or not(not((13 - 5 + 38 - x)) >= Smh_009)
+    and 666 = number_of_the_BEAST
+    and true or false
+
+then
+    skip
+
+else
+    while (1 > 0 or 0 < 1) do
+        x := abc;
+        skip
+    od
+
+fi
