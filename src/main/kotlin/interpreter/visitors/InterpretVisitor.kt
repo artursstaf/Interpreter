@@ -3,7 +3,7 @@ package interpreter.visitors
 import interpreter.*
 import java.util.*
 
-class InterpretVisitor : Visitor {
+class InterpretVisitor(private val verbose: Boolean) : Visitor {
 
     private val variables = mutableMapOf<String, Long>()
     private val arithmeticStack = Stack<Long>()
@@ -43,6 +43,7 @@ class InterpretVisitor : Visitor {
     override fun visit(node: AssignStatement) {
         node.expr.accept(this)
         variables[node.variable] = arithmeticStack.pop()
+        if(verbose) println("State: $variables")
     }
 
     override fun visit(node: LoopStatement) {
@@ -64,11 +65,14 @@ class InterpretVisitor : Visitor {
         val strValue = readLine()!!.trim()
         val asLong = strValue.toLongOrNull() ?: throw InvalidIntegerValue(strValue)
         variables[it] = asLong
-    }
+    }.also { if(verbose) println("State: $variables") }
 
-    override fun visit(node: WriteStatement) = node.varList.forEach { println(getVar(it)) }
+    override fun visit(node: WriteStatement) = node.varList.forEach { println("Output: ${getVar(it)}") }
     override fun visit(node: SkipStatement) = Unit
-    override fun visit(node: Program) = node.statements.forEach { it.accept(this) }
+    override fun visit(node: Program){
+        if(verbose) println("Running program: ")
+        node.statements.forEach { it.accept(this) }
+    }
 
     private fun getVar(name: String): Long {
         if (!variables.containsKey(name)) throw VariableNotDefinedException(name)
@@ -109,4 +113,4 @@ class InterpretVisitor : Visitor {
     }
 }
 
-fun Program.run() = this.accept(InterpretVisitor())
+fun Program.interpret(verbose: Boolean = false) = this.accept(InterpretVisitor(verbose))

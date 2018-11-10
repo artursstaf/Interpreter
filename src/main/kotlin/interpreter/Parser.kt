@@ -1,7 +1,7 @@
 package interpreter
 
 import interpreter.visitors.print
-import interpreter.visitors.run
+import interpreter.visitors.interpret
 import java.io.File
 
 class Parser(private val tokens: List<Token>) {
@@ -24,7 +24,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun peekToken() = tokens[tokensIt.nextIndex()].info
 
-    private fun consume(expected: TokenInfo, ignoreNewLines: Boolean = true): Token {
+    private fun eatToken(expected: TokenInfo, ignoreNewLines: Boolean = true): Token {
         with(tokensIt) {
             if (ignoreNewLines) {
                 while (hasNext() && peekToken() == TokenInfo.NEWLINE) next()
@@ -39,7 +39,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun progr(): List<Statement> {
         val statements = series()
-        consume(TokenInfo.NEWLINE, false)
+        eatToken(TokenInfo.NEWLINE, ignoreNewLines = false)
         if (peekTokenIgnoreNewLines() != TokenInfo.NEWLINE)
             throw ParseException("Expecting end of program, found ${peekTokenIgnoreNewLines()}")
         return statements
@@ -47,9 +47,9 @@ class Parser(private val tokens: List<Token>) {
 
     private fun series(): List<Statement> {
         val statements = mutableListOf(stmt())
-        while (tokensIt.hasNext() && peekTokenIgnoreNewLines() == TokenInfo.SEMICOLON) {
-            consume(TokenInfo.SEMICOLON)
-            statements.add(stmt())
+        if(peekTokenIgnoreNewLines() == TokenInfo.SEMICOLON){
+            eatToken(TokenInfo.SEMICOLON)
+            statements.addAll(series())
         }
         return statements
     }
@@ -60,7 +60,7 @@ class Parser(private val tokens: List<Token>) {
             TokenInfo.WRITE -> outputStmt()
             TokenInfo.READ -> inputStmt()
             TokenInfo.SKIP -> {
-                consume(TokenInfo.SKIP)
+                eatToken(TokenInfo.SKIP)
                 SkipStatement()
             }
             TokenInfo.IF -> condStmt()
@@ -70,34 +70,34 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun loopStmt(): Statement {
-        consume(TokenInfo.WHILE)
+        eatToken(TokenInfo.WHILE)
         val condition = bExpr()
-        consume(TokenInfo.DO)
+        eatToken(TokenInfo.DO)
         val statements = series()
-        consume(TokenInfo.OD)
+        eatToken(TokenInfo.OD)
         return LoopStatement(condition, statements)
     }
 
     private fun condStmt(): Statement {
-        consume(TokenInfo.IF)
+        eatToken(TokenInfo.IF)
         val condition = bExpr()
-        consume(TokenInfo.THEN)
+        eatToken(TokenInfo.THEN)
         val statements = series()
 
         val elseStmt = if (peekTokenIgnoreNewLines() == TokenInfo.ELSE) {
-            consume(TokenInfo.ELSE)
+            eatToken(TokenInfo.ELSE)
             series()
         } else {
             emptyList()
         }
 
-        consume(TokenInfo.FI)
+        eatToken(TokenInfo.FI)
         return ConditionalStatement(condition, statements, elseStmt)
     }
 
     private fun assignStmt(): Statement {
-        val variable = consume(TokenInfo.VARNAME).value
-        consume(TokenInfo.ASSIGNMENT)
+        val variable = eatToken(TokenInfo.VARNAME).value
+        eatToken(TokenInfo.ASSIGNMENT)
         val algebraicExpression = aExpr()
         return AssignStatement(variable, algebraicExpression)
     }
@@ -107,7 +107,7 @@ class Parser(private val tokens: List<Token>) {
         val leftOperand = aTerm()
 
         return if (peekTokenIgnoreNewLines() == TokenInfo.AWEAKOP) {
-            when (consume(TokenInfo.AWEAKOP).value) {
+            when (eatToken(TokenInfo.AWEAKOP).value) {
                 "+" -> SumExpression(leftOperand, aExpr())
                 "-" -> MinusExpression(leftOperand, aExpr())
                 else -> throw ParseException("Could not find +,- operators")
@@ -121,7 +121,7 @@ class Parser(private val tokens: List<Token>) {
         val leftOperand = aElem()
 
         return if (peekTokenIgnoreNewLines() == TokenInfo.ASTRONGOP) {
-            when (consume(TokenInfo.ASTRONGOP).value) {
+            when (eatToken(TokenInfo.ASTRONGOP).value) {
                 "*" -> MultiplicationExpression(leftOperand, aTerm())
                 "/" -> DivisionExpression(leftOperand, aTerm())
                 else -> throw ParseException("Could not find *,/ operators")
@@ -133,12 +133,12 @@ class Parser(private val tokens: List<Token>) {
 
     private fun aElem(): AlgebraicExpression {
         return when (peekTokenIgnoreNewLines()) {
-            TokenInfo.NUMBER -> NumberLiteral(consume(TokenInfo.NUMBER).value.toLong())
-            TokenInfo.VARNAME -> NumericVariable(consume(TokenInfo.VARNAME).value)
+            TokenInfo.NUMBER -> NumberLiteral(eatToken(TokenInfo.NUMBER).value.toLong())
+            TokenInfo.VARNAME -> NumericVariable(eatToken(TokenInfo.VARNAME).value)
             TokenInfo.OPENINGBRACKET -> {
-                consume(TokenInfo.OPENINGBRACKET)
+                eatToken(TokenInfo.OPENINGBRACKET)
                 val algebraicExpression = aExpr()
-                consume(TokenInfo.CLOSINGBRACKET)
+                eatToken(TokenInfo.CLOSINGBRACKET)
                 algebraicExpression
             }
             else -> throw ParseException("Could not parse aElem, found ${peekTokenIgnoreNewLines()}")
@@ -149,7 +149,7 @@ class Parser(private val tokens: List<Token>) {
         val leftOperand = bTerm()
 
         return if (peekTokenIgnoreNewLines() == TokenInfo.OR) {
-            consume(TokenInfo.OR)
+            eatToken(TokenInfo.OR)
             OrExpression(leftOperand, bExpr())
         } else {
             leftOperand
@@ -160,7 +160,7 @@ class Parser(private val tokens: List<Token>) {
         val leftOperand = bElem()
 
         return if (peekTokenIgnoreNewLines() == TokenInfo.AND) {
-            consume(TokenInfo.AND)
+            eatToken(TokenInfo.AND)
             AndExpression(leftOperand, bTerm())
         } else {
             leftOperand
@@ -169,9 +169,9 @@ class Parser(private val tokens: List<Token>) {
 
     private fun bElem(): BooleanExpression {
         return when (peekTokenIgnoreNewLines()) {
-            TokenInfo.BCONSTANT -> BooleanConstant(consume(TokenInfo.BCONSTANT).value.toBoolean())
+            TokenInfo.BCONSTANT -> BooleanConstant(eatToken(TokenInfo.BCONSTANT).value.toBoolean())
             TokenInfo.NOT -> {
-                consume(TokenInfo.NOT)
+                eatToken(TokenInfo.NOT)
                 NotExpression(bElem())
             }
             TokenInfo.NUMBER -> aExprRelation()
@@ -183,7 +183,7 @@ class Parser(private val tokens: List<Token>) {
 
     private fun aExprRelation(): BooleanExpression {
         val leftOperand = aExpr()
-        return when (consume(TokenInfo.RELATION).value) {
+        return when (eatToken(TokenInfo.RELATION).value) {
             "<" -> SmallerThanRelation(leftOperand, aExpr())
             ">" -> GreaterThanRelation(leftOperand, aExpr())
             "=<" -> SmallerThanOrEqualRelation(leftOperand, aExpr())
@@ -195,27 +195,27 @@ class Parser(private val tokens: List<Token>) {
     }
 
     private fun bElemBrackets(): BooleanExpression {
-        consume(TokenInfo.OPENINGBRACKET)
+        eatToken(TokenInfo.OPENINGBRACKET)
         val binaryExpr = bExpr()
-        consume(TokenInfo.CLOSINGBRACKET)
+        eatToken(TokenInfo.CLOSINGBRACKET)
         return binaryExpr
     }
 
     private fun outputStmt(): Statement {
-        consume(TokenInfo.WRITE)
+        eatToken(TokenInfo.WRITE)
         return WriteStatement(varList())
     }
 
     private fun inputStmt(): Statement {
-        consume(TokenInfo.READ)
+        eatToken(TokenInfo.READ)
         return ReadStatment(varList())
     }
 
     private fun varList(): List<String> {
-        val list = mutableListOf(consume(TokenInfo.VARNAME).value)
+        val list = mutableListOf(eatToken(TokenInfo.VARNAME).value)
 
         if (peekTokenIgnoreNewLines() == TokenInfo.COMMA) {
-            consume(TokenInfo.COMMA)
+            eatToken(TokenInfo.COMMA)
             list.addAll(varList())
         }
 
@@ -234,9 +234,12 @@ class Parser(private val tokens: List<Token>) {
 }
 
 fun main(args: Array<String>) {
-    val file = File(if (args.isNotEmpty()) args[0] else "GCD.txt").readText()
+    if(args.isEmpty()) throw Exception ("Expecting file argument")
+    val verbose = args.size >= 2 && args[1].trim() == "-v"
+    val file = File(args[0].trim()).readText()
+
     val tokens = Tokenizer().tokenize(file)
     val root = Parser(tokens).buildAst()
-    root.print()
-    root.run()
+    if (verbose) root.print()
+    root.interpret(verbose)
 }

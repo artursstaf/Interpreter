@@ -31,4 +31,5 @@ jar {
         attributes 'Main-Class': 'interpreter.ParserKt'
     }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    baseName 'int'
 }
