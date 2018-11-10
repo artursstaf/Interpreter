@@ -234,7 +234,7 @@ class Parser(private val tokens: List<Token>) {
 }
 
 fun main(args: Array<String>) {
-    val file = File(if (args.isNotEmpty()) args[0] else "prog1.txt").readText()
+    val file = File(if (args.isNotEmpty()) args[0] else "GCD.txt").readText()
     val tokens = Tokenizer().tokenize(file)
     val root = Parser(tokens).buildAst()
     root.print()
